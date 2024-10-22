@@ -22,7 +22,7 @@ type User struct {
 type Verification struct {
 	VerificationID int       `json:"vid"                        gorm:"column:vid;primaryKey;autoIncrement"`
 	Email          string    `json:"email"    form:"email"      gorm:"unique;not null"`
-	Username       string    `json:"username" form:"username"   gorm:"unique;not null"`
+	Name           string    `json:"name"     form:"name"       gorm:"unique;not null"`
 	Password       string    `json:"password" form:"password"   gorm:"not null"`
 	CreatedAt      time.Time `                                  gorm:"column:created_at;index"`
 }
