@@ -28,3 +28,8 @@ func ConnectDB() error {
 	
 	return nil
 }
+
+// create database if not present
+// func CreateDatabase() error {
+
+// }

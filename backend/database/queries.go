@@ -10,7 +10,7 @@ import (
 )
 
 // user queries
-func AddUserToVerify(c *fiber.Ctx, user models.User) error {
+func AddUserToVerify(c *fiber.Ctx, user *models.User) error {
 	email := user.Email
 	
 	// deleting any previous record of user
@@ -94,20 +94,34 @@ func AddUser(c *fiber.Ctx, email string) (string, error) {
 	return "", nil
 }
 
+// gettting user details
+func GetUserDetails (c *fiber.Ctx, userid int) (*models.User, error) {
+	var user models.User
+	
+	log.Infof("fetching user details of userid '%d'", userid)
+	result := DB.Select("name, number, email, expense").Where("userid = ?", userid).First(&user)
+	if result.Error != nil {
+		log.Warn(result.Error)
+		return nil, result.Error
+	}
+
+	return &user, nil
+}
+
 
 // misc queries
 // to validate creds -> during login
-func ValidateCreds(c *fiber.Ctx, creds *models.Credentials) (bool, error) {
+func ValidateCreds(c *fiber.Ctx, creds *models.Credentials) error {
 	var user models.User
 
 	result := DB.Where("email = ? AND password = ?", creds.Email, creds.Password).First(&user)
 	if result.Error != nil {
 		log.Warn(result.Error)
-		return false, result.Error
+		return result.Error
 	}
 
 	log.Infof("verified credentials for '%s'", creds.Email)
-	return true, nil
+	return nil
 }
 
 // to check whether there is a duplicate email at the time of signup
