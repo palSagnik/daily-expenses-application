@@ -60,7 +60,6 @@ func AddUser(c *fiber.Ctx, email string) (string, error) {
 		return "user already exists", errors.New("token already verified")
 	}
 	if err != nil {
-		log.Warn(err)
 		return err.Error(), err
 	}
 

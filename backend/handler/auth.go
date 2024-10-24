@@ -48,8 +48,6 @@ func Signup(c *fiber.Ctx) error {
 	// Store the hash of the password in the database
 	signup.Password = utils.GenerateHash(signup.Password)
 
-	// TODO:(Function for sending verification mail)
-
 	// Add to verification table to send mail
 	err := database.AddUserToVerify(c, signup)
 	if err != nil {
@@ -57,7 +55,12 @@ func Signup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status":"failed", "message":"please contact admin"})
 	}
 
-	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status":"success", "message":"check your email for verification"})
+	// send verification mail
+	if err := utils.SendVerificationMail(signup); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status":"failed", "message":"error in sending verification email"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status":"success", "message":"check your email for verification"})
 }
 
 func Login(c *fiber.Ctx) error {
@@ -82,6 +85,9 @@ func Login(c *fiber.Ctx) error {
 	if isOk, statusMsg := utils.VerifyLoginInput(creds); !isOk {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status":"failed", "message":statusMsg})
 	}
+
+	// hashing the password
+	creds.Password = utils.GenerateHash(creds.Password)
 
 	// checking email and password
 	if err := database.ValidateCreds(c, creds); err != nil {

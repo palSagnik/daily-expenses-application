@@ -29,26 +29,25 @@ func getToken(user *models.User) (string, error) {
 }
 
 func SendVerificationMail(user *models.User) error {
+
 	token, err := getToken(user)
 	if err != nil {
 		return err
 	}
 
 	secret := config.EMAIL_AUTH
-
 	fromEmail := config.EMAIL_ID
 	toEmail := []string{
 		user.Email,
 	}
-
 	auth := smtp.PlainAuth("", fromEmail, secret, config.SMTP_HOST)
-	templ, _ := template.ParseFiles("templates/mail.html")
+	templ, _ := template.ParseFiles("template/mail.html")
 
 	var body bytes.Buffer
 
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	body.Write([]byte(fmt.Sprintf("Subject: Daily-Expenses-App Email Verification\n%s\n\n", mimeHeaders)))
-
+	
 	templ.Execute(&body, struct {
 		Username string
 		Link     string
