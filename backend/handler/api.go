@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/palSagnik/daily-expenses-application/database"
@@ -11,7 +12,8 @@ func GetUserDetails(c *fiber.Ctx) error {
 	var userid int
 	var err error
 
-	userid_string := c.FormValue("userid")
+	userid_string := c.Query("id")
+	
 	if userid_string == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "failure", "message": "missing parameters in request"})
 	}

@@ -108,7 +108,7 @@ func GetUserDetails (c *fiber.Ctx, userid int) (*models.User, error) {
 	}
 }
 
-func GetUsers (c *fiber.Ctx) ([]*models.User, error) {
+func GetUsers (c *fiber.Ctx) ([]*models.UserDetails, error) {
 
 	query := `SELECT user_id, name, email, number FROM users ORDER BY user_id;`
 	rows, err := DB.Query(query)
@@ -117,14 +117,14 @@ func GetUsers (c *fiber.Ctx) ([]*models.User, error) {
 	}
 	defer rows.Close()
 
-	var users []*models.User
+	var users []*models.UserDetails
 	for rows.Next() {
-		user := &models.User{}
+		user := &models.UserDetails{}
 
 		err := rows.Scan(
 			&user.UserID,
-			&user.Email,
 			&user.Name,
+			&user.Email,
 			&user.Number,
 		)
 		if err != nil {
@@ -140,7 +140,7 @@ func GetUsers (c *fiber.Ctx) ([]*models.User, error) {
 // to validate creds -> during login
 func ValidateCreds(c *fiber.Ctx, creds *models.Credentials) error {
 
-	query := `SELECT id FROM users WHERE email=$1 AND password=$2;`
+	query := `SELECT user_id FROM users WHERE email=$1 AND password=$2;`
 	_, err := DB.Exec(query, creds.Email, creds.Password)
 	if err != nil {
 		log.Warn(err)

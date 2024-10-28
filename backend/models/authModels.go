@@ -28,6 +28,14 @@ type Verification struct {
 	CreatedAt      time.Time
 }
 
+type UserDetails struct {
+	UserID      int          `json:"userid"`
+	Email       string       `json:"email"           form:"email"`
+	Name        string       `json:"name"            form:"name"`
+	Number      string       `json:"number"          form:"number"`
+	Expenses  	[]Expense    `json:"expenses"        form:"expenses"`
+}
+
 // struct for credentials
 // will be used during login
 type Credentials struct {
