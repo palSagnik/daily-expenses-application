@@ -19,7 +19,8 @@ func SetUpRoutes(app *fiber.App) {
 	// these routes will only be accessible after verification
 	// hence a token is used to access the api calls such as userdetails, expenses
 	api := app.Group("/api", middleware.VerifyToken())
-	api.Get("/user/details", handler.GetUserDetails)
-	// api.Post("/expense/add", handler.AddExpense)
+	api.Get("/users", handler.GetUsers)
+	api.Get("/user_details/:id", handler.GetUserDetails)
+	//api.Post("/add_expense", handler.AddExpense)
 	// api.Get("")
 }

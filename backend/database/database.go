@@ -1,25 +1,29 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-
+	_ "github.com/lib/pq"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/palSagnik/daily-expenses-application/config"
 )
 
 var (
-	DB *gorm.DB
+	DB *sql.DB
 	err error
 )
 
 // connecting to the database
 func ConnectDB() error {
 	
-	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d", config.DB_HOST, config.DB_USER, config.DB_PASS, config.DB_NAME, config.DB_PORT)
-	DB, err = gorm.Open(postgres.Open(connectionString), &gorm.Config{})
+	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s", config.DB_HOST, config.DB_USER, config.DB_PASS, config.DB_NAME, config.DB_PORT, config.SSL_MODE)
+	DB, err = sql.Open("postgres", connectionString)
+	if err != nil {
+		return err
+	}
+
+	err = DB.Ping()
 	if err != nil {
 		return err
 	}
@@ -28,8 +32,3 @@ func ConnectDB() error {
 	
 	return nil
 }
-
-// create database if not present
-// func CreateDatabase() error {
-
-// }

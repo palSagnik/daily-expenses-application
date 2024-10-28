@@ -2,6 +2,8 @@
 
 rm test
 
+go mod tidy
+
 echo "Building the go-project"
 go build -o test
 

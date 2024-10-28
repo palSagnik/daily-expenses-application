@@ -1,38 +1,36 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	_ "github.com/lib/pq"
 	"github.com/palSagnik/daily-expenses-application/models"
-	"gorm.io/gorm"
 )
 
 // user queries
 func AddUserToVerify(c *fiber.Ctx, user *models.User) error {
-	email := user.Email
 	
 	// deleting any previous record of user
-	result := DB.Delete(&models.Verification{}, "email = ?", email)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error
+	query := `DELETE FROM verifications WHERE email = $1;`
+	_, err := DB.Exec(query, user.Email)
+	if err != nil {
+		log.Warn(err)
+		return err
 	}
 	
 	// adding user to verification table
-	result = DB.Create(&models.Verification{
-		Name: user.Name,
-		Email: user.Email,
-		Number: user.Number,
-		Password: user.Password,
-	})
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error
+	query = `INSERT INTO verifications (email, name, number, password, created_at) VALUES ($1, $2, $3, $4, $5);`
+	_, err = DB.Exec(query, user.Email, user.Name, user.Number, user.Password, time.Now())
+	if err != nil {
+		log.Warn(err)
+		return err
 	}
 
-	log.Infof("added user with email '%s' for verification", email)
+	log.Infof("added user with email '%s' for verification", user.Email)
 	return nil
 
 }
@@ -41,10 +39,11 @@ func AddUserToVerify(c *fiber.Ctx, user *models.User) error {
 func DeleteUser(c *fiber.Ctx) error {
 	email := c.Params("email")
 	
-	result := DB.Delete(&models.User{}, "email = ?", email)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error
+	query := `DELETE FROM users WHERE email = $1;`
+	_, err := DB.Exec(query, email)
+	if err != nil {
+		log.Warn(err)
+		return err
 	}
 
 	log.Infof("deleted user with email '%s'", email)
@@ -63,31 +62,30 @@ func AddUser(c *fiber.Ctx, email string) (string, error) {
 		return err.Error(), err
 	}
 
-	// email does not exist hence fetch from verification table
+	// email does not exist in the user table hence fetch from verification table
 	var verifiedUser models.Verification
-	result := DB.Select("name, email, number, password").Where("email = ?", email).First(&verifiedUser)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error.Error(), result.Error
+
+	query := `SELECT email, name, number, password FROM verifications WHERE email=$1`
+	row := DB.QueryRow(query, email)
+	if err := row.Scan(&verifiedUser.Email, &verifiedUser.Name, &verifiedUser.Number, &verifiedUser.Password); err != nil {
+		log.Warn(err)
+		return  err.Error(), err
 	}
 
 	// creating user
-	result = DB.Create(&models.User{
-		Email: verifiedUser.Email,
-		Name: verifiedUser.Name,
-		Number: verifiedUser.Number,
-		Password: verifiedUser.Password,
-	})
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error.Error(), result.Error
+	query = `INSERT INTO users (email, name, number, password) VALUES ($1, $2, $3, $4);`
+	_, err = DB.Exec(query, verifiedUser.Email, verifiedUser.Name, verifiedUser.Number, verifiedUser.Password)
+	if err != nil {
+		log.Warn(err)
+		return err.Error(), err
 	}
 
 	// deleting from verification table
-	result = DB.Delete(&models.Verification{}, "email = ?", email)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error.Error(), result.Error
+	query = `DELETE FROM verifications WHERE email=$1`
+	_, err = DB.Exec(query, email)
+	if err != nil {
+		log.Warn(err)
+		return err.Error(), err
 	}
 	
 	return "", nil
@@ -98,25 +96,55 @@ func GetUserDetails (c *fiber.Ctx, userid int) (*models.User, error) {
 	var user models.User
 	
 	log.Infof("fetching user details of userid '%d'", userid)
-	result := DB.Select("name, number, email, expense").Where("userid = ?", userid).First(&user)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return nil, result.Error
+	query := `SELECT email, name, number FROM users WHERE user_id=$1`
+	row := DB.QueryRow(query, userid)
+	switch err := row.Scan(&user.Email, &user.Name, &user.Number); err {
+	case sql.ErrNoRows:
+		return nil, sql.ErrNoRows
+	case nil:
+		return &user, err
+	default:
+		return nil, err
 	}
-
-	return &user, nil
 }
 
+func GetUsers (c *fiber.Ctx) ([]*models.User, error) {
+
+	query := `SELECT user_id, name, email, number FROM users ORDER BY user_id;`
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		user := &models.User{}
+
+		err := rows.Scan(
+			&user.UserID,
+			&user.Email,
+			&user.Name,
+			&user.Number,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
 
 // misc queries
 // to validate creds -> during login
 func ValidateCreds(c *fiber.Ctx, creds *models.Credentials) error {
-	var user models.User
 
-	result := DB.Where("email = ? AND password = ?", creds.Email, creds.Password).First(&user)
-	if result.Error != nil {
-		log.Warn(result.Error)
-		return result.Error
+	query := `SELECT id FROM users WHERE email=$1 AND password=$2;`
+	_, err := DB.Exec(query, creds.Email, creds.Password)
+	if err != nil {
+		log.Warn(err)
+		return err
 	}
 
 	log.Infof("verified credentials for '%s'", creds.Email)
@@ -125,19 +153,16 @@ func ValidateCreds(c *fiber.Ctx, creds *models.Credentials) error {
 
 // to check whether there is a duplicate email at the time of signup
 func doesEmailExist(email string) (bool, error) {
+	var id int
 
-	user := new(models.User)
-	result := DB.Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		// Error is record not found
-		if result.Error == gorm.ErrRecordNotFound {
-			return false, nil
-		}
-
-		// some other error
-		return false, result.Error
+	query := `SELECT user_id FROM users WHERE email=$1`
+	row := DB.QueryRow(query, email)
+	switch err := row.Scan(&id); err {
+	case sql.ErrNoRows:
+		return false, nil
+	case nil:
+		return true, err
+	default:
+		return false, err
 	}
-
-	// duplicate email found
-	return true, nil
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/palSagnik/daily-expenses-application/database"
-
 )
 
 func GetUserDetails(c *fiber.Ctx) error {
@@ -27,4 +26,14 @@ func GetUserDetails(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(user)
+}
+
+func GetUsers(c *fiber.Ctx) error {
+	
+	users, err := database.GetUsers(c)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status":"success", "message":err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(users)
 }
